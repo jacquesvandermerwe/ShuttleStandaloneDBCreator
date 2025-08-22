@@ -350,12 +350,14 @@ public class SQLiteDirectImporter {
                         StreamingHandler handler = new StreamingHandler(conn, filePath.getFileName().toString());
                         processSheet(sheet, sst, handler);
                         int rowsProcessed = handler.getRowsProcessed();
+                        int errorCount = handler.getErrorCount();
                         totalRowsProcessed += rowsProcessed;
                         
                         long sheetDuration = System.currentTimeMillis() - sheetStartTime;
+                        String errorSummary = errorCount > 0 ? " (" + errorCount + " errors)" : "";
                         System.out.println("      " + (SUPPORTS_EMOJI ? "✅ " : "[COMPLETED] ") + 
                                          String.format("%,d", rowsProcessed) + " rows processed in " + 
-                                         formatTime(sheetDuration));
+                                         formatTime(sheetDuration) + errorSummary);
                     } else {
                         System.out.println("      " + (SUPPORTS_EMOJI ? "⏭️  " : "[SKIPPED] ") + 
                                          "Not a Transfer Report sheet - skipping");
@@ -431,6 +433,7 @@ public class SQLiteDirectImporter {
         private boolean isFirstRow = true;
         private int rowsProcessed = 0;
         private int batchCount = 0;
+        private int errorCount = 0;
         
         public StreamingHandler(Connection conn, String sourceFile) throws SQLException {
             this.conn = conn;
@@ -477,7 +480,24 @@ public class SQLiteDirectImporter {
                     System.out.flush();
                 }
             } catch (SQLException e) {
-                throw new RuntimeException("Error inserting row: " + e.getMessage(), e);
+                errorCount++;
+                String fileName = currentRow.size() > 0 ? currentRow.get(0) : "unknown";
+                printError("Row " + (rowNumber + 1) + " skipped - SQL error for file '" + fileName + "': " + e.getMessage());
+                
+                // Log problematic row data for debugging (first few columns only)
+                StringBuilder rowPreview = new StringBuilder();
+                for (int i = 0; i < Math.min(currentRow.size(), 3); i++) {
+                    if (i > 0) rowPreview.append(", ");
+                    String value = currentRow.get(i);
+                    rowPreview.append(value != null && value.length() > 50 ? value.substring(0, 50) + "..." : value);
+                }
+                printError("Row data preview: " + rowPreview.toString());
+                
+                // Continue processing despite the error
+                if (errorCount % 100 == 0) {
+                    System.out.println();
+                    printError("Warning: " + errorCount + " rows have been skipped due to errors");
+                }
             }
         }
         
@@ -533,10 +553,19 @@ public class SQLiteDirectImporter {
             if (rowsProcessed > 0) {
                 System.out.println(); // New line after progress dots
             }
+            
+            // Report error summary if any errors occurred
+            if (errorCount > 0) {
+                printError("Import completed with " + errorCount + " rows skipped due to errors");
+            }
         }
         
         public int getRowsProcessed() {
             return rowsProcessed;
+        }
+        
+        public int getErrorCount() {
+            return errorCount;
         }
         
         private int getColumnIndex(String cellReference) {
@@ -558,6 +587,7 @@ public class SQLiteDirectImporter {
         
         int rowsProcessed = 0;
         int batchCount = 0;
+        int errorCount = 0;
         
         try {
             for (Row row : sheet) {
@@ -569,17 +599,38 @@ public class SQLiteDirectImporter {
                     rowData[i] = getCellValueAsString(cell);
                 }
                 
-                // Insert row using same logic as streaming handler
-                insertRowTraditional(upsertStmt, rowData, jobName);
-                rowsProcessed++;
-                batchCount++;
-                
-                if (batchCount >= BATCH_SIZE) {
-                    upsertStmt.executeBatch();
-                    conn.commit();
-                    batchCount = 0;
-                    System.out.print(".");
-                    System.out.flush();
+                try {
+                    // Insert row using same logic as streaming handler
+                    insertRowTraditional(upsertStmt, rowData, jobName);
+                    rowsProcessed++;
+                    batchCount++;
+                    
+                    if (batchCount >= BATCH_SIZE) {
+                        upsertStmt.executeBatch();
+                        conn.commit();
+                        batchCount = 0;
+                        System.out.print(".");
+                        System.out.flush();
+                    }
+                } catch (SQLException e) {
+                    errorCount++;
+                    String fileName = rowData.length > 0 ? rowData[0] : "unknown";
+                    printError("Row " + (row.getRowNum() + 1) + " skipped - SQL error for file '" + fileName + "': " + e.getMessage());
+                    
+                    // Log problematic row data for debugging (first few columns only)
+                    StringBuilder rowPreview = new StringBuilder();
+                    for (int i = 0; i < Math.min(rowData.length, 3); i++) {
+                        if (i > 0) rowPreview.append(", ");
+                        String value = rowData[i];
+                        rowPreview.append(value != null && value.length() > 50 ? value.substring(0, 50) + "..." : value);
+                    }
+                    printError("Row data preview: " + rowPreview.toString());
+                    
+                    // Continue processing despite the error
+                    if (errorCount % 100 == 0) {
+                        System.out.println();
+                        printError("Warning: " + errorCount + " rows have been skipped due to errors");
+                    }
                 }
             }
             
@@ -590,6 +641,11 @@ public class SQLiteDirectImporter {
             
             if (rowsProcessed > 0) {
                 System.out.println(); // New line after progress dots
+            }
+            
+            // Report error summary if any errors occurred
+            if (errorCount > 0) {
+                printError("Import completed with " + errorCount + " rows skipped due to errors");
             }
             
         } finally {
