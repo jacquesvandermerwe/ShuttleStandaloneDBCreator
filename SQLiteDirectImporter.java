@@ -34,6 +34,7 @@ import java.nio.file.StandardCopyOption;
 import java.sql.*;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -942,19 +943,12 @@ public class SQLiteDirectImporter {
                 return null;
             }
             
-            LocalDateTime excelEpoch = LocalDateTime.of(1899, 12, 30, 0, 0);
-            
-            long wholeDays = (long) excelDate;
-            double fractionDay = excelDate - wholeDays;
-            
-            if (wholeDays > 59) {
-                wholeDays -= 1;
+            Date javaDate = DateUtil.getJavaDate(excelDate);
+            if (javaDate == null) {
+                return null;
             }
             
-            LocalDateTime dateTime = excelEpoch.plusDays(wholeDays);
-            long seconds = Math.round(fractionDay * 24 * 60 * 60);
-            dateTime = dateTime.plusSeconds(seconds);
-            
+            LocalDateTime dateTime = javaDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
             return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             
         } catch (NumberFormatException e) {
