@@ -63,7 +63,6 @@ public class TransferOverviewExtractor {
         // Statistics tracking
         int filesProcessed = 0;
         int overviewSheetsExtracted = 0;
-        int filesSkippedTooLarge = 0;
         
         // Process files sequentially to avoid memory issues with large files
         for (Path file : excelFiles) {
