@@ -309,25 +309,32 @@ public class ExcelProcessor {
             }
             
             // Remove empty files if no data was written
-            if (folderFileCreated && totalFolderRows == 0) {
-                try {
-                    Files.deleteIfExists(Paths.get(getCsvPath(filePath, "Folder-")));
-                } catch (IOException e) {
-                    System.err.println("Could not delete empty Folder CSV file");
-                }
-            }
-            if (claimsFileCreated && totalClaimsRows == 0) {
-                try {
-                    Files.deleteIfExists(Paths.get(getCsvPath(filePath, "Claims-")));
-                } catch (IOException e) {
-                    System.err.println("Could not delete empty Claims CSV file");
-                }
-            }
+            cleanupOutputFile(folderFileCreated, totalFolderRows, filePath, "Folder-");
+            cleanupOutputFile(claimsFileCreated, totalClaimsRows, filePath, "Claims-");
             
             System.out.println("Resource cleanup completed");
         }
         
         return new FileStats(totalRowsProcessed, totalFolderRows, totalClaimsRows);
+    }
+    
+    /**
+     * Helper method to clean up empty output files.
+     * Removes CSV files that were created but contain no data.
+     * 
+     * @param created Whether the file was created
+     * @param rowCount Number of rows written to the file
+     * @param filePath Path to the source Excel file
+     * @param prefix Prefix for the CSV filename
+     */
+    private static void cleanupOutputFile(boolean created, int rowCount, Path filePath, String prefix) {
+        if (created && rowCount == 0) {
+            try {
+                Files.deleteIfExists(Paths.get(getCsvPath(filePath, prefix)));
+            } catch (IOException e) {
+                System.err.println("Could not delete empty " + prefix + "CSV file");
+            }
+        }
     }
     
     /**
