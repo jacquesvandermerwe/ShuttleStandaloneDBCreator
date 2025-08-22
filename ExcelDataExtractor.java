@@ -836,23 +836,7 @@ public class ExcelDataExtractor {
                             // Don't process this as a status
                         } else {
                             // Create status writer if it doesn't exist
-                            if (!statusWriters.containsKey(cleanStatus)) {
-                                try {
-                                    String statusCsvPath = getCsvPath(filePath, cleanStatus + "-Status-");
-                                    PrintWriter statusWriter = new PrintWriter(Files.newBufferedWriter(Paths.get(statusCsvPath)));
-                                    statusWriters.put(cleanStatus, statusWriter);
-                                    statusFilesCreated.add(cleanStatus);
-                                    statusRowCounts.put(cleanStatus, 0);
-                                    
-                                    // Write header to new status CSV file if we have it
-                                    if (headerRow != null) {
-                                        writeCsvRow(statusWriter, headerRow);
-                                        statusFilesWithHeaders.add(cleanStatus);
-                                    }
-                                } catch (IOException e) {
-                                    System.err.println("Error creating status CSV for: '" + cleanStatus + "' - " + e.getMessage());
-                                }
-                            }
+                            getOrCreateStatusWriter(cleanStatus);
                         }
                         
                         // Write to status CSV
@@ -872,23 +856,7 @@ public class ExcelDataExtractor {
                         
                         // Skip if the status is still too long after cleaning (likely not a real status)
                         if (cleanStatus.length() <= 50) {
-                            if (!statusWriters.containsKey(cleanStatus)) {
-                                try {
-                                    String statusCsvPath = getCsvPath(filePath, cleanStatus + "-Status-");
-                                    PrintWriter statusWriter = new PrintWriter(Files.newBufferedWriter(Paths.get(statusCsvPath)));
-                                    statusWriters.put(cleanStatus, statusWriter);
-                                    statusFilesCreated.add(cleanStatus);
-                                    statusRowCounts.put(cleanStatus, 0);
-                                    
-                                    // Write header to new status CSV file if we have it
-                                    if (headerRow != null) {
-                                        writeCsvRow(statusWriter, headerRow);
-                                        statusFilesWithHeaders.add(cleanStatus);
-                                    }
-                                } catch (IOException ex) {
-                                    System.err.println("Error creating status CSV for: '" + cleanStatus + "' - " + ex.getMessage());
-                                }
-                            }
+                            getOrCreateStatusWriter(cleanStatus);
                         
                             PrintWriter statusWriter = statusWriters.get(cleanStatus);
                             if (statusWriter != null) {
@@ -901,6 +869,36 @@ public class ExcelDataExtractor {
                 }
             }
         }
+    }
+    
+    /**
+     * Helper method to create or retrieve a PrintWriter for a given status.
+     * Handles the creation of status CSV files and writes headers if available.
+     * 
+     * @param cleanStatus The sanitized status name
+     * @return PrintWriter for the status, or null if creation failed
+     */
+    private PrintWriter getOrCreateStatusWriter(String cleanStatus) {
+        if (!statusWriters.containsKey(cleanStatus)) {
+            try {
+                String statusCsvPath = getCsvPath(filePath, cleanStatus + "-Status-");
+                PrintWriter statusWriter = new PrintWriter(Files.newBufferedWriter(Paths.get(statusCsvPath)));
+                statusWriters.put(cleanStatus, statusWriter);
+                statusFilesCreated.add(cleanStatus);
+                statusRowCounts.put(cleanStatus, 0);
+                
+                // Write header to new status CSV file if we have it
+                if (headerRow != null) {
+                    writeCsvRow(statusWriter, headerRow);
+                    statusFilesWithHeaders.add(cleanStatus);
+                }
+                return statusWriter;
+            } catch (IOException e) {
+                System.err.println("Error creating status CSV for: '" + cleanStatus + "' - " + e.getMessage());
+                return null;
+            }
+        }
+        return statusWriters.get(cleanStatus);
     }
     
     /**
