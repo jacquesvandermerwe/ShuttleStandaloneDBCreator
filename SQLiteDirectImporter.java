@@ -487,7 +487,7 @@ public class SQLiteDirectImporter {
             } catch (SQLException e) {
                 errorCount++;
                 String fileName = currentRow.size() > 0 ? currentRow.get(0) : "unknown";
-                printError("Row " + (rowNumber + 1) + " skipped - SQL error for file '" + fileName + "': " + e.getMessage());
+                printError("Row " + (rowNum + 1) + " skipped - SQL error for file '" + fileName + "': " + e.getMessage());
                 
                 // Log problematic row data for debugging (first few columns only)
                 StringBuilder rowPreview = new StringBuilder();
