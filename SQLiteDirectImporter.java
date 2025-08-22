@@ -792,21 +792,71 @@ public class SQLiteDirectImporter {
     }
     
     /**
-     * Calculate parent IDs for all records
+     * Calculate parent IDs for all records using efficient Map-based approach
      */
     private static void calculateParentIDs(Connection conn) throws SQLException {
-        String updateSQL = "UPDATE " + TABLE_NAME + " SET parent_id = (" +
-                "SELECT p2.target_file_id FROM " + TABLE_NAME + " p2 " +
-                "WHERE p2.file_name = " + TABLE_NAME + ".parent_folder LIMIT 1" +
-                ") WHERE parent_folder IS NOT NULL";
-
-        try (Statement stmt = conn.createStatement()) {
-            long startTime = System.currentTimeMillis();
-            int updatedRows = stmt.executeUpdate(updateSQL);
-            long duration = System.currentTimeMillis() - startTime;
-            
-            printSuccess("Updated parent IDs for " + String.format("%,d", updatedRows) + " records in " + duration + "ms");
+        long startTime = System.currentTimeMillis();
+        
+        // Step 1: Build file_name -> target_file_id mapping
+        Map<String, String> fileNameToIdMap = new HashMap<>();
+        String selectSQL = "SELECT file_name, target_file_id FROM " + TABLE_NAME + " WHERE target_file_id IS NOT NULL";
+        
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(selectSQL)) {
+            while (rs.next()) {
+                String fileName = rs.getString("file_name");
+                String targetFileId = rs.getString("target_file_id");
+                if (fileName != null && targetFileId != null) {
+                    fileNameToIdMap.put(fileName, targetFileId);
+                }
+            }
         }
+        
+        // Step 2: Batch update parent_id values using the mapping
+        String updateSQL = "UPDATE " + TABLE_NAME + " SET parent_id = ? WHERE file_name = ? AND parent_folder IS NOT NULL";
+        int updatedRows = 0;
+        
+        try (PreparedStatement updateStmt = conn.prepareStatement(updateSQL)) {
+            conn.setAutoCommit(false);
+            
+            // Get records that need parent_id updates
+            String selectRecordsSQL = "SELECT file_name, parent_folder FROM " + TABLE_NAME + " WHERE parent_folder IS NOT NULL";
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(selectRecordsSQL)) {
+                
+                int batchCount = 0;
+                while (rs.next()) {
+                    String fileName = rs.getString("file_name");
+                    String parentFolder = rs.getString("parent_folder");
+                    
+                    String parentId = fileNameToIdMap.get(parentFolder);
+                    if (parentId != null) {
+                        updateStmt.setString(1, parentId);
+                        updateStmt.setString(2, fileName);
+                        updateStmt.addBatch();
+                        batchCount++;
+                        
+                        if (batchCount >= BATCH_SIZE) {
+                            int[] results = updateStmt.executeBatch();
+                            updatedRows += java.util.Arrays.stream(results).sum();
+                            batchCount = 0;
+                        }
+                    }
+                }
+                
+                // Execute remaining batch
+                if (batchCount > 0) {
+                    int[] results = updateStmt.executeBatch();
+                    updatedRows += java.util.Arrays.stream(results).sum();
+                }
+            }
+            
+            conn.commit();
+            conn.setAutoCommit(true);
+        }
+        
+        long duration = System.currentTimeMillis() - startTime;
+        printSuccess("Updated parent IDs for " + String.format("%,d", updatedRows) + " records in " + duration + "ms using efficient Map-based approach");
     }
     
     /**
