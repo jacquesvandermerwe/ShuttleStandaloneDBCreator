@@ -85,7 +85,7 @@ public class InspectColumnsStreaming {
     /**
      * Process a single sheet using SAX parsing for streaming.
      */
-    private static void processSheet(InputStream sheetInputStream, SharedStrings sst, InspectorHandler handler) throws Exception {
+    private static void processSheet(InputStream sheetInputStream, SharedStrings sst, InspectorHandler handler) throws java.io.IOException, org.xml.sax.SAXException {
         XMLReader parser = XMLReaderFactory.createXMLReader();
         DataFormatter formatter = new DataFormatter();
         ContentHandler contentHandler = new XSSFSheetXMLHandler(null, sst, handler, formatter, false);
