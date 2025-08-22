@@ -357,8 +357,8 @@ public class SQLiteDirectImporter {
     private static int processXLSTraditional(Connection conn, Path filePath) throws Exception {
         int totalRowsProcessed = 0;
         
-        try (FileInputStream fis = new FileInputStream(filePath.toFile())) {
-            Workbook workbook = new HSSFWorkbook(fis);
+        try (FileInputStream fis = new FileInputStream(filePath.toFile());
+             Workbook workbook = new HSSFWorkbook(fis)) {
             
             for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
                 Sheet sheet = workbook.getSheetAt(i);
@@ -368,8 +368,6 @@ public class SQLiteDirectImporter {
                     totalRowsProcessed += processSheetTraditional(conn, sheet, filePath.getFileName().toString());
                 }
             }
-            
-            workbook.close();
         }
         
         return totalRowsProcessed;
