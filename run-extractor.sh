@@ -156,20 +156,24 @@ main() {
         print_success "Data extraction completed successfully!"
         echo
         
-        # Run SQLite import if FolderHierarchyImporter.java exists
+        # Ask user if they want to run the SQLite import
         if [ -f "FolderHierarchyImporter.java" ]; then
-            print_info "Running SQLite import..."
-            echo "----------------------------------------"
-            
-            if jbang FolderHierarchyImporter.java "$DIRECTORY"; then
+            read -p "Folder-Object CSVs were created. Import them into folder_hierarchy.db? (Y/n): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+                print_info "Running SQLite import..."
                 echo "----------------------------------------"
-                print_success "SQLite database import completed!"
-                print_info "Database location: folder_hierarchy.db"
-                echo
-            else
-                echo "----------------------------------------"
-                print_warning "SQLite import failed - continuing without database import"
-                echo
+                
+                if jbang FolderHierarchyImporter.java "$DIRECTORY"; then
+                    echo "----------------------------------------"
+                    print_success "SQLite database import completed!"
+                    print_info "Database location: folder_hierarchy.db"
+                    echo
+                else
+                    echo "----------------------------------------"
+                    print_warning "SQLite import failed - continuing without database import"
+                    echo
+                fi
             fi
         else
             print_warning "FolderHierarchyImporter.java not found - skipping SQLite import"
