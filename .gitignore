@@ -81,7 +81,6 @@ local.properties
 # NetBeans
 /nbproject/private/
 /nbbuild/
-/dist/
 /nbdist/
 /.nb-gradle/
 
@@ -136,7 +135,6 @@ $RECYCLE.BIN/
 *.lnk
 
 # Linux
-*~
 .fuse_hidden*
 .directory
 .Trash-*
@@ -182,7 +180,6 @@ cache/
 
 # Configuration files that might contain sensitive data
 config.properties
-local.properties
 
 # Sample data directory (if used for testing)
 sample-data/
@@ -200,7 +197,6 @@ test-data/
 # ===========================
 
 # Distribution archives
-dist/
 build/
 
 # Generated documentation
@@ -243,25 +239,19 @@ secrets/
 *.old
 *.orig
 
-# Archive files that might accumulate
+# Archive files that might accumulate  
 *.7z
 *.dmg
-*.gz
 *.iso
-*.rar
 *.tar
-*.zip
 
 # ===========================
 # Editor and Tool Files
 # ===========================
 
-# Vim
+# Vim and Emacs
 *.swp
 *.swo
-*~
-
-# Emacs
 *~
 \#*\#
 /.emacs.desktop
@@ -291,5 +281,3 @@ libs/
 dependencies/
 
 # OS generated files
-.fseventsd
-.Spotlight-*
