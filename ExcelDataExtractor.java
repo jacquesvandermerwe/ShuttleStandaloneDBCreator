@@ -777,10 +777,10 @@ public class ExcelDataExtractor {
                 String fileStatus = "";
                 if (currentRow.size() > 18) {
                     fileStatus = currentRow.get(18); // Column S - File Status (success, match-exists, etc.)
-                } else if (currentRow.size() > 15) {
-                    fileStatus = currentRow.get(15); // Column P - File Status (fallback)
                 } else if (currentRow.size() > 17) {
                     fileStatus = currentRow.get(17); // Column R - Status (fallback)
+                } else if (currentRow.size() > 15) {
+                    fileStatus = currentRow.get(15); // Column P - File Status (fallback)
                 }
                 
                 if (fileStatus == null) fileStatus = "";
