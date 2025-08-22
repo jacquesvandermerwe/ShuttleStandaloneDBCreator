@@ -109,19 +109,29 @@ main() {
     print_success "Pre-flight checks passed"
     echo
     
+    # Set up source directory
+    SOURCE_DIR="$DIRECTORY/source"
+    
     # Show configuration
     print_info "Configuration:"
-    echo "  📁 Target directory: $DIRECTORY"
+    echo "  📁 Base directory: $DIRECTORY"
+    echo "  📥 Source directory: $SOURCE_DIR (Excel files to process)"
     echo "  📊 Script: ExcelDataExtractor.java"
     echo "  🧵 Processing: Sequential (one file at a time)"
     echo "  📋 Output types: Folder Objects, File Objects, Status Groups"
     echo
     
-    # Count Excel files in directory only (not subdirectories, excluding temporary files starting with ~)
-    EXCEL_COUNT=$(find "$DIRECTORY" -maxdepth 1 \( -name "*.xlsx" -o -name "*.xls" \) ! -name "~*" 2>/dev/null | wc -l | tr -d ' ')
+    # Count Excel files in source directory only (not subdirectories, excluding temporary files)
+    if [ ! -d "$SOURCE_DIR" ]; then
+        mkdir -p "$SOURCE_DIR"
+        print_info "Created source directory: $SOURCE_DIR"
+    fi
+    
+    EXCEL_COUNT=$(find "$SOURCE_DIR" -maxdepth 1 \( -name "*.xlsx" -o -name "*.xls" \) ! -name "~*" 2>/dev/null | wc -l | tr -d ' ')
     
     if [ "$EXCEL_COUNT" -eq 0 ]; then
-        print_warning "No Excel files found in: $DIRECTORY"
+        print_warning "No Excel files found in source directory: $SOURCE_DIR"
+        print_info "Please place Excel files (.xlsx, .xls) in the source/ folder"
         print_info "Looking for files with extensions: .xlsx, .xls"
         exit 0
     fi
@@ -151,7 +161,7 @@ main() {
     print_info "Starting Excel Data Extractor..."
     echo "----------------------------------------"
     
-    if jbang ExcelDataExtractor.java "$DIRECTORY"; then
+    if jbang ExcelDataExtractor.java "$SOURCE_DIR"; then
         echo "----------------------------------------"
         print_success "Data extraction completed successfully!"
         echo
