@@ -22,6 +22,7 @@ import org.apache.poi.xssf.eventusermodel.XSSFSheetXMLHandler;
 import org.apache.poi.xssf.eventusermodel.XSSFSheetXMLHandler.SheetContentsHandler;
 import org.apache.poi.xssf.usermodel.XSSFComment;
 import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.util.CellReference;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
@@ -736,21 +737,8 @@ public class ExcelDataExtractor {
             if (cellReference == null || cellReference.isEmpty()) return 0;
             
             // Extract column letters from cell reference (e.g., "B10" -> "B")
-            StringBuilder columnLetters = new StringBuilder();
-            for (char c : cellReference.toCharArray()) {
-                if (Character.isLetter(c)) {
-                    columnLetters.append(c);
-                } else {
-                    break; // Stop at first non-letter (the row number)
-                }
-            }
-            
-            // Convert column letters to index
-            int columnIndex = 0;
-            for (char c : columnLetters.toString().toCharArray()) {
-                columnIndex = columnIndex * 26 + (c - 'A' + 1);
-            }
-            return columnIndex - 1; // Convert to 0-based index
+            String colStr = cellReference.replaceAll("\\d", "");
+            return CellReference.convertColStringToIndex(colStr);
         }
         
         /**
