@@ -109,12 +109,13 @@ jbang SQLiteDirectImporter.java /path/to/project custom.db
 - **JBang** (installed automatically by setup.sh)
 - **Excel Files**: .xlsx and .xls formats supported
 
-## Pattern Recognition
+## Hierarchical Processing
 
-The application recognizes these folder hierarchy patterns:
-- **Claims**: `/Clients/[Customer]/[Policy]/Claim Documents/[ClaimID]`
-- **Customers**: `/Clients/[CustomerName]`
-- **UNC Paths**: `//UKDOCDWNPSFS102/PI_Folders/D/DATA/HCCD/Folders/[NUMBER]`
+The application calculates folder hierarchy relationships:
+- **Path Level**: Calculated by counting directory separators in file paths
+- **Parent Folder**: Extracted from file path directory structure  
+- **Parent ID**: Linked to target_file_id of parent folder record
+- **Generic Structure**: Works with any folder hierarchy pattern
 
 ## Troubleshooting
 

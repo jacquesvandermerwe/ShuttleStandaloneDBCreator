@@ -59,13 +59,13 @@ project-directory/
    - Creates organized structure: `report/[filename]/Overview/Overview-[filename].xlsx`
    - Preserves formatting, charts, and images using ZIP-level manipulation
 
-### Pattern Recognition
+### Hierarchical Processing
 
-The project recognizes these folder hierarchy patterns:
-- **Claims**: `/Clients/[Customer]/[Policy]/Claim Documents/[ClaimID]`
-- **Customer Folders**: `/Clients/[CustomerName]`
-- **Policy References**: `/Clients/[Customer]/[PolicyNumber]` (numeric only)
-- **UNC Paths**: `//UKDOCDWNPSFS102/PI_Folders/D/DATA/HCCD/Folders/[NUMBER]`
+The project performs generic hierarchy calculation:
+- **Path Level Calculation**: Counts directory separators in file paths
+- **Parent Folder Extraction**: Derives parent directory from file path structure
+- **Parent ID Linking**: Maps parent folders to target_file_id references
+- **Generic Pattern Support**: Works with any folder hierarchy structure
 
 ### Database Schema
 
