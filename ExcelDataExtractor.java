@@ -138,9 +138,9 @@ public class ExcelDataExtractor {
     private static final Pattern CUSTOMER_FOLDERS_PATTERN = Pattern.compile(".*/Clients/[^/]+/?$");
     
     /**
-     * Pattern matching for Policy Reference: /Clients/XXX/YYY where XXX is customer name and YYY is policy reference (no children)
+     * Pattern matching for Policy Reference: /Clients/XXX/YYY where XXX is customer name and YYY is policy reference (numeric only)
      */
-    private static final Pattern POLICY_REFERENCE_PATTERN = Pattern.compile(".*/Clients/[^/]+/[^/]+/?$");
+    private static final Pattern POLICY_REFERENCE_PATTERN = Pattern.compile(".*/Clients/[^/]+/[0-9.]+(/)?$");
     
     /**
      * Check if a file path matches the Claims pattern
