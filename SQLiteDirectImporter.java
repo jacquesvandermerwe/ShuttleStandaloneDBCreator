@@ -161,7 +161,6 @@ public class SQLiteDirectImporter {
         // Statistics tracking
         int filesProcessed = 0;
         int totalRowsProcessed = 0;
-        int totalRowsInserted = 0;
         
         try (Connection conn = createDatabase(databasePath)) {
             // Drop indexes before data import for optimal performance
