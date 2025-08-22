@@ -440,7 +440,37 @@ public class ExcelProcessor {
         
         @Override
         public void cell(String cellReference, String formattedValue, XSSFComment comment) {
-            currentRow.add(formattedValue != null ? formattedValue : "");
+            // Parse cell reference to get column index (e.g., "A1" -> 0, "B1" -> 1, etc.)
+            int columnIndex = getColumnIndex(cellReference);
+            
+            // Ensure the currentRow list is large enough to accommodate this column
+            while (currentRow.size() <= columnIndex) {
+                currentRow.add("");
+            }
+            
+            // Set the value at the correct column index
+            currentRow.set(columnIndex, formattedValue != null ? formattedValue : "");
+        }
+        
+        private int getColumnIndex(String cellReference) {
+            if (cellReference == null || cellReference.isEmpty()) return 0;
+            
+            // Extract column letters from cell reference (e.g., "B10" -> "B")
+            StringBuilder columnLetters = new StringBuilder();
+            for (char c : cellReference.toCharArray()) {
+                if (Character.isLetter(c)) {
+                    columnLetters.append(c);
+                } else {
+                    break; // Stop at first non-letter (the row number)
+                }
+            }
+            
+            // Convert column letters to index
+            int columnIndex = 0;
+            for (char c : columnLetters.toString().toCharArray()) {
+                columnIndex = columnIndex * 26 + (c - 'A' + 1);
+            }
+            return columnIndex - 1; // Convert to 0-based index
         }
         
         /**
