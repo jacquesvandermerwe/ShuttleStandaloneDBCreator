@@ -163,12 +163,7 @@ public class InspectColumnsStreaming {
          * Convert column index to Excel column letter (0=A, 1=B, etc.)
          */
         private String getColumnLetter(int columnIndex) {
-            StringBuilder columnLetter = new StringBuilder();
-            while (columnIndex >= 0) {
-                columnLetter.insert(0, (char) ('A' + columnIndex % 26));
-                columnIndex = columnIndex / 26 - 1;
-            }
-            return columnLetter.toString();
+            return CellReference.convertNumToColString(columnIndex);
         }
     }
 }
