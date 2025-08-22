@@ -84,6 +84,11 @@ public class SQLiteDirectImporter {
         "last_access_time", "start_time", "transfer_time"
     );
     
+    // Numeric columns that should be BIGINT type
+    private static final Set<String> BIGINT_COLUMNS = Set.of(
+        "source_file_size", "target_file_size", "target_file_id"
+    );
+    
     private static void printInfo(String message) {
         System.out.println((SUPPORTS_EMOJI ? "🔍 " : "[INFO] ") + message);
     }
@@ -283,7 +288,7 @@ public class SQLiteDirectImporter {
         for (String column : DB_COLUMNS) {
             if (DATE_COLUMNS.contains(column)) {
                 createTableSQL.append(column).append(" DATETIME, ");
-            } else if (column.equals("source_file_size") || column.equals("target_file_size") || column.equals("target_file_id")) {
+            } else if (BIGINT_COLUMNS.contains(column)) {
                 createTableSQL.append(column).append(" BIGINT, ");
             } else {
                 createTableSQL.append(column).append(" TEXT, ");
@@ -514,7 +519,7 @@ public class SQLiteDirectImporter {
                     } else {
                         upsertStmt.setNull(i + 1, Types.VARCHAR);
                     }
-                } else if (dbColumn.equals("source_file_size") || dbColumn.equals("target_file_size") || dbColumn.equals("target_file_id")) {
+                } else if (BIGINT_COLUMNS.contains(dbColumn)) {
                     try {
                         if (value != null && !value.trim().isEmpty()) {
                             long fileSize = Long.parseLong(value.trim());
@@ -671,7 +676,7 @@ public class SQLiteDirectImporter {
                 } else {
                     upsertStmt.setNull(i + 1, Types.VARCHAR);
                 }
-            } else if (dbColumn.equals("source_file_size") || dbColumn.equals("target_file_size") || dbColumn.equals("target_file_id")) {
+            } else if (BIGINT_COLUMNS.contains(dbColumn)) {
                 try {
                     if (value != null && !value.trim().isEmpty()) {
                         long fileSize = Long.parseLong(value.trim());
