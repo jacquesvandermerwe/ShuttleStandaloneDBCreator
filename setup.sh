@@ -134,16 +134,16 @@ check_java_files() {
     
     local missing_files=()
     
-    if [ ! -f "ExcelProcessor.java" ]; then
-        missing_files+=("ExcelProcessor.java")
+    if [ ! -f "SQLiteDirectImporter.java" ]; then
+        missing_files+=("SQLiteDirectImporter.java")
     else
-        print_status "ExcelProcessor.java found"
+        print_status "SQLiteDirectImporter.java found"
     fi
     
-    if [ ! -f "ExcelDataExtractor.java" ]; then
-        missing_files+=("ExcelDataExtractor.java")
+    if [ ! -f "TransferOverviewExtractor.java" ]; then
+        missing_files+=("TransferOverviewExtractor.java")
     else
-        print_status "ExcelDataExtractor.java found"
+        print_status "TransferOverviewExtractor.java found"
     fi
     
     if [ ! -f "InspectColumnsStreaming.java" ]; then
@@ -167,16 +167,16 @@ test_jbang_scripts() {
     
     local failed_scripts=()
     
-    if jbang --dry-run ExcelProcessor.java &> /dev/null; then
-        print_status "ExcelProcessor.java validation successful"
+    if jbang --dry-run SQLiteDirectImporter.java &> /dev/null; then
+        print_status "SQLiteDirectImporter.java validation successful"
     else
-        failed_scripts+=("ExcelProcessor.java")
+        failed_scripts+=("SQLiteDirectImporter.java")
     fi
     
-    if jbang --dry-run ExcelDataExtractor.java &> /dev/null; then
-        print_status "ExcelDataExtractor.java validation successful"
+    if jbang --dry-run TransferOverviewExtractor.java &> /dev/null; then
+        print_status "TransferOverviewExtractor.java validation successful"
     else
-        failed_scripts+=("ExcelDataExtractor.java")
+        failed_scripts+=("TransferOverviewExtractor.java")
     fi
     
     if jbang --dry-run InspectColumnsStreaming.java &> /dev/null; then
@@ -200,16 +200,6 @@ check_runner_scripts() {
     
     local script_count=0
     
-    if [ -f "run-extractor.sh" ]; then
-        print_status "run-extractor.sh found"
-        if [ ! -x "run-extractor.sh" ]; then
-            chmod +x run-extractor.sh
-            print_status "Made run-extractor.sh executable"
-        fi
-        script_count=$((script_count + 1))
-    else
-        print_warning "run-extractor.sh not found"
-    fi
     
     if [ -f "run-sqlite-importer.sh" ]; then
         print_status "run-sqlite-importer.sh found"
@@ -300,15 +290,14 @@ main() {
     print_status "Environment setup complete!"
     echo
     print_info "Usage examples:"
-    print_info "  • Comprehensive extraction: ./run-extractor.sh [directory]"
     print_info "  • SQLite direct import: ./run-sqlite-importer.sh"
     print_info "  • Overview extraction: ./run-overview.sh [directory]"
     print_info "  • File inspection: jbang InspectColumnsStreaming.java [excel_file]"
-    print_info "  • Direct JBang usage: jbang ExcelProcessor.java [directory]"
+    print_info "  • Direct JBang usage: jbang SQLiteDirectImporter.java"
     echo
     print_info "Available tools:"
-    print_info "  • ExcelProcessor.java - Extract specific patterns (folder/claims)"
-    print_info "  • ExcelDataExtractor.java - Extract all data by categories"
+    print_info "  • SQLiteDirectImporter.java - Direct Excel to SQLite database import"
+    print_info "  • TransferOverviewExtractor.java - Extract Overview sheets to Excel files"
     print_info "  • InspectColumnsStreaming.java - Examine file structure"
     echo
     print_info "For more information, see README.md"

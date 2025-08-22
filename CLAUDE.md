@@ -4,7 +4,7 @@ This file provides guidance when working with code in this repository.
 
 ## Project Overview
 
-ShuttleStandaloneDBCreator is a comprehensive Java-based suite for processing Excel Transfer Report files and converting the data into organized CSV files and SQLite databases. The project specializes in extracting and categorizing data from large (700MB+) Excel files containing document migration information.
+ShuttleStandaloneDBCreator is a Java-based suite for processing Excel Transfer Report files and importing the data directly into SQLite databases. The project specializes in extracting and categorizing data from large (700MB+) Excel files containing document migration information.
 
 ## Build and Run Commands
 
@@ -15,16 +15,14 @@ This project uses JBang for simplified Java execution without traditional build 
 - Prerequisites: Java 21+ (for virtual threads), JBang
 
 ### Core Processing Tools
-- **SQLite Direct Import**: `./run-sqlite-importer.sh [directory]` (recommended - direct Excel to SQLite)
-- **CSV Data Extraction**: `./run-extractor.sh [directory]` (uses ExcelDataExtractor.java)
-- **Overview Extraction**: `./run-overview.sh [directory]` (uses TransferOverviewExtractor.java)
-- **File Inspection**: `jbang InspectColumnsStreaming.java [excel_file]`
+- **SQLite Direct Import**: `./run-sqlite-importer.sh` (recommended - direct Excel to SQLite database)
+- **Overview Extraction**: `./run-overview.sh [directory]` (extract Overview sheets to Excel files)
+- **File Inspection**: `jbang InspectColumnsStreaming.java [excel_file]` (examine file structure)
 
 ### Direct JBang Usage
-- `jbang SQLiteDirectImporter.java [directory]` - Direct Excel to SQLite import (recommended)
-- `jbang ExcelDataExtractor.java [directory]` - Extract all data by categories to CSV
-- `jbang InspectColumnsStreaming.java [file]` - Examine file structure
+- `jbang SQLiteDirectImporter.java` - Direct Excel to SQLite import (primary workflow)
 - `jbang TransferOverviewExtractor.java [directory]` - Extract Overview sheets
+- `jbang InspectColumnsStreaming.java [file]` - Examine file structure
 
 ## Architecture
 
@@ -53,27 +51,12 @@ project-directory/
    - Creates SQLite database in `report/` folder with job names
    - No intermediate CSV files created
 
-2. **ExcelProcessor.java** - Targeted pattern extraction
-   - Extracts rows where Source File Size = 0
-   - Filters by specific UNC path patterns for UK legal document structure
-   - Creates: Folder-[filename].csv, Claims-[filename].csv
-
-3. **ExcelDataExtractor.java** - Comprehensive data extraction to CSV
-   - Categorizes all Transfer Report data by file size and patterns
-   - Creates organized folder structure: `report/[filename]/[category]/`
-   - Output files:
-     - `Folder-Object-[filename].csv` (File Size = 0)
-     - `File-Object-[filename].csv` (File Size > 0)
-     - `Claims-[filename].csv` (Claims pattern matches)
-     - `Customer-Folders-[filename].csv` (Customer pattern matches)
-     - `[STATUS]-Status-[filename].csv` (Grouped by File Status values)
-
-4. **InspectColumnsStreaming.java** - File structure inspector
+2. **InspectColumnsStreaming.java** - File structure inspector
    - Examines first 1000 rows using streaming API
    - Identifies column structure and highlights status columns
    - Useful for understanding new file formats
 
-5. **TransferOverviewExtractor.java** - Overview sheet extractor
+3. **TransferOverviewExtractor.java** - Overview sheet extractor
    - Extracts "Overview" sheets from Excel files
    - Creates organized structure: `report/[filename]/Overview/Overview-[filename].xlsx`
    - Preserves formatting, charts, and images using ZIP-level manipulation
@@ -112,16 +95,10 @@ SQLite database (`transfer_reports.db`) includes:
 4. **File Management**: Automatically moves processed files to `processed/` folder
 5. **Analysis**: Query using built-in views and status breakdowns
 
-### CSV Extraction Workflow (Alternative)
-1. **Discovery**: Find Excel files in target directory
-2. **Extraction**: Process Transfer Report sheets using streaming methods  
-3. **Categorization**: Sort data by file size, patterns, and status values
-4. **Output**: Create organized CSV files in `report/[filename]/[category]/` structure
-
 ## Runner Scripts
 
 - `setup.sh` - Environment setup and validation
-- `run-extractor.sh` - Main data extraction pipeline (with optional SQLite import)
+- `run-sqlite-importer.sh` - Primary data processing pipeline (direct Excel to SQLite)
 - `run-overview.sh` - Overview sheet extraction (if TransferOverviewExtractor.java exists)
 - All scripts include progress reporting, error handling, and colored output
 
