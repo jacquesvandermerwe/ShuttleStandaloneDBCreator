@@ -31,7 +31,6 @@ project/
 │   └── transfer_reports.db
 ├── setup.sh           # Environment setup
 ├── run-sqlite-importer.sh  # Main processing script (recommended)
-├── run-extractor.sh        # CSV extraction alternative
 └── run-overview.sh         # Overview sheet extraction
 ```
 
@@ -46,17 +45,17 @@ project/
 - **Memory Efficient**: Handles 700MB+ Excel files using streaming APIs
 
 ### Database Structure
-- **Main Table**: `transfer_data` with all Excel columns plus computed hierarchy
-- **Key Columns**: `job_name`, `parent_folder`, `parent_id`, `level`
+- **Main Table**: `transfer_data` with Excel columns mapped to actual file structure
+- **Core Fields**: `file_name`, `source_file_size`, `target_file_size`, `target_file_id`, `file_status`, `status`
+- **Key Columns**: `job_name` (source Excel filename), `parent_folder`, `parent_id`, `level`
 - **Analysis Views**: 
   - `files_view` - All files (source_file_size > 0)
   - `folders_view` - All folders (source_file_size = 0)
   - `status_summary` - Status counts and breakdown
   - `hierarchy_children` - Recursive parent-child relationships
-- **Dynamic Views**: `status_[name]` for each unique file status
+- **Performance**: Indexes created after data import for optimal speed
 
 ### Alternative Processing Options
-- **CSV Extraction**: `./run-extractor.sh` - Extract to organized CSV files
 - **Overview Extraction**: `./run-overview.sh` - Extract Overview sheets to Excel
 - **File Inspection**: `jbang InspectColumnsStreaming.java [file]` - Examine structure
 
@@ -91,18 +90,17 @@ SELECT * FROM transfer_data WHERE job_name = 'MyExcelFileName' LIMIT 10;
 # Direct JBang execution
 jbang SQLiteDirectImporter.java /path/to/project custom.db
 
-# Extract to CSV instead
-./run-extractor.sh /path/to/excel/files
-
 # Extract only Overview sheets
 ./run-overview.sh /path/to/excel/files
 ```
 
 ## Performance
 
+- **Index Management**: Drops indexes during import, recreates after completion for optimal speed
 - **Memory Optimized**: 8GB heap allocation with streaming APIs
 - **Large File Support**: Successfully processes 700MB+ Excel files
 - **Batch Processing**: 1000-record transaction batches
+- **Real-time Feedback**: Sheet-by-sheet progress with timing and row counts
 - **Cross-Platform**: Windows, macOS, Linux support
 
 ## Requirements
@@ -135,8 +133,7 @@ The application recognizes these folder hierarchy patterns:
 This project uses JBang for simplified Java execution without traditional build tools. All dependencies are declared within the Java files themselves.
 
 ### Key Components
-- `SQLiteDirectImporter.java` - Main direct import processor
-- `ExcelDataExtractor.java` - CSV extraction processor  
+- `SQLiteDirectImporter.java` - Main direct import processor with column mapping corrections
 - `TransferOverviewExtractor.java` - Overview sheet extractor
 - `InspectColumnsStreaming.java` - File structure inspector
 
@@ -145,6 +142,7 @@ This project uses JBang for simplified Java execution without traditional build 
 - Traditional POI for XLS files
 - Automatic garbage collection between files
 - Transaction batching for database operations
+- Performance-optimized index management
 
 ---
 

@@ -72,28 +72,48 @@ The project recognizes these folder hierarchy patterns:
 ### Database Schema
 
 SQLite database (`transfer_reports.db`) includes:
-- Main table: `transfer_data` with all Excel columns plus hierarchy and job tracking
-- Computed columns: `parent_folder`, `parent_id`, `level`, `job_name`
+
+**Main Table: `transfer_data`**
+- All Excel columns mapped correctly to match actual file structure
+- Core fields: `file_name`, `source_file_size`, `target_file_size`, `target_file_id`
+- Account fields: `source_account`, `target_account`
+- Timestamp fields: `creation_time`, `source_last_modification_time`, `target_last_modification_time`, `last_access_time`, `start_time`, `transfer_time`
+- Processing fields: `checksum_method`, `checksum`, `file_status`, `errors`, `status`, `translated_file_name`
+- Computed columns: `parent_folder`, `parent_id`, `level`, `job_name` (filename without extension)
+- Metadata: `import_timestamp`
+
+**Views and Indexes:**
 - Analysis views: `files_view`, `folders_view`, `status_summary`, `hierarchy_children`
-- Dynamic status views: `status_[name]` for each unique status type
-- Indexes for performance on all key fields
+- Performance indexes on all key fields (created after data import for optimal performance)
+- UNIQUE constraint on `(file_name, target_file_id)` for UPSERT operations
 
-### Memory Management
+### Performance Optimizations
 
-- Uses Apache POI streaming API for XLSX files (memory efficient)
-- Traditional POI approach for XLS files
-- 8GB heap allocation via JBang JVM options
-- Transaction batching (1000 records per batch)
-- Automatic garbage collection between files
+- **Streaming Processing**: Apache POI streaming API for XLSX files (memory efficient)
+- **Index Management**: Drops indexes before bulk import, recreates after completion for optimal performance
+- **Memory Settings**: 8GB heap allocation via JBang JVM options
+- **Batch Processing**: Transaction batching (1000 records per batch)
+- **Resource Management**: Automatic garbage collection between files
+- **File Type Handling**: Streaming for .xlsx files, traditional API for .xls files
+- **Warning Suppression**: Native access and SLF4J logging optimizations
 
 ## File Processing Workflow
 
 ### SQLite Direct Import (Recommended)
 1. **Setup**: Place Excel files in `source/` folder
-2. **Processing**: Run `./run-sqlite-importer.sh` to process all Transfer Report sheets  
-3. **Database Creation**: Creates `report/transfer_reports.db` with hierarchical data and job tracking
-4. **File Management**: Automatically moves processed files to `processed/` folder
-5. **Analysis**: Query using built-in views and status breakdowns
+2. **Processing**: Run `./run-sqlite-importer.sh` to process all Transfer Report sheets
+3. **Detailed Feedback**: Shows sheet-by-sheet processing with timing and row counts
+4. **Performance**: Drops indexes during import, recreates after completion for optimal speed
+5. **Database Creation**: Creates `report/transfer_reports.db` with hierarchical data and job tracking
+6. **File Management**: Automatically moves processed files to `processed/` folder
+7. **Analysis**: Query using built-in views and status breakdowns
+
+**Import Process Details:**
+- Processes only sheets named "Transfer Report*"
+- Provides real-time feedback on sheet discovery and processing
+- Handles both new database creation and appending to existing databases
+- Maps Excel columns correctly to database fields
+- Stores source filename in `job_name` field for traceability
 
 ## Runner Scripts
 

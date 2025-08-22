@@ -1,7 +1,7 @@
 ///usr/bin/env jbang "$0" "$@" ; exit $?
 
 // JVM Options for handling large Excel files
-//JAVA_OPTIONS -Xmx8g -XX:+UseG1GC -Djdk.xml.maxGeneralEntitySizeLimit=0 -Djdk.xml.totalEntitySizeLimit=0 -Djdk.xml.maxParameterEntitySizeLimit=0 -Djdk.xml.entityExpansionLimit=0 -Djdk.xml.maxElementDepth=0
+//JAVA_OPTIONS -Xmx8g -XX:+UseG1GC -Djdk.xml.maxGeneralEntitySizeLimit=0 -Djdk.xml.totalEntitySizeLimit=0 -Djdk.xml.maxParameterEntitySizeLimit=0 -Djdk.xml.entityExpansionLimit=0 -Djdk.xml.maxElementDepth=0 --enable-native-access=ALL-UNNAMED -Dorg.slf4j.simpleLogger.defaultLogLevel=WARN
 
 // Dependencies for Excel processing and SQLite
 //DEPS org.apache.poi:poi:5.3.0
@@ -62,22 +62,20 @@ public class SQLiteDirectImporter {
     // Platform detection for emoji support
     private static final boolean SUPPORTS_EMOJI = !System.getProperty("os.name").toLowerCase().contains("windows");
     
-    // Database column names (snake_case for SQLite)
+    // Database column names (snake_case for SQLite) - Updated to match actual Excel structure
     private static final String[] DB_COLUMNS = {
-        "file_name", "source_file_size", "target_file_size", "source_file_id", "target_file_id",
-        "source_account", "source_namespace", "target_account", "source_created_by", "creation_time",
-        "source_last_modified_by", "source_last_modification_time", "target_last_modification_time",
-        "last_access_time", "start_time", "transfer_time", "checksum_method", "checksum",
-        "file_status", "errors", "status", "translated_file_name"
+        "file_name", "source_file_size", "target_file_size", "target_file_id", "source_account",
+        "target_account", "creation_time", "source_last_modified_by", "source_last_modification_time",
+        "target_last_modification_time", "last_access_time", "start_time", "transfer_time",
+        "checksum_method", "checksum", "file_status", "errors", "status", "translated_file_name"
     };
     
-    // CSV header names (exactly as they appear in the Excel files)
+    // Excel header names (exactly as they appear in the Excel files) - Updated to match inspection
     private static final String[] EXCEL_HEADERS = {
-        "File Name", "Source File Size", "Target File Size", "Source File ID", "Target File ID",
-        "Source Account", "Source Namespace", "Target Account", "Source Created By", "Creation Time",
-        "Source Last Modified By", "Source Last Modification Time", "Target Last Modification Time",
-        "Last Access Time", "Start Time", "Transfer Time", "Checksum Method", "Checksum",
-        "File Status", "Errors", "Status", "Translated File Name"
+        "File Name", "Source File Size", "Target File Size", "Target File ID", "Source Account",
+        "Target Account", "Creation Time", "Source Last Modified By", "Source Last Modification Time",
+        "Target Last Modification Time", "Last Access Time", "Start Time", "Transfer Time",
+        "Checksum Method", "Checksum", "File Status", "Errors", "Status", "Translated File Name"
     };
     
     // Date/time columns that need conversion from Excel serial numbers
@@ -160,6 +158,10 @@ public class SQLiteDirectImporter {
         int totalRowsInserted = 0;
         
         try (Connection conn = createDatabase(databasePath)) {
+            // Drop indexes before data import for optimal performance
+            printInfo("Dropping indexes for faster bulk import...");
+            dropIndexes(conn);
+            
             // Process files sequentially to avoid memory issues
             for (Path file : excelFiles) {
                 try {
@@ -191,6 +193,10 @@ public class SQLiteDirectImporter {
                     e.printStackTrace();
                 }
             }
+            
+            // Create indexes for optimal query performance after data loading
+            printInfo("Creating database indexes...");
+            createIndexes(conn);
             
             // Calculate parent IDs and create views
             printInfo("Calculating hierarchical relationships...");
@@ -271,13 +277,13 @@ public class SQLiteDirectImporter {
     private static void createTable(Connection conn) throws SQLException {
         StringBuilder createTableSQL = new StringBuilder();
         createTableSQL.append("CREATE TABLE IF NOT EXISTS ").append(TABLE_NAME).append(" (");
-        createTableSQL.append("id INTEGER PRIMARY KEY AUTOINCREMENT, ");
+        createTableSQL.append("id INTEGER PRIMARY KEY, ");
         
         // Add all original columns with appropriate data types
         for (String column : DB_COLUMNS) {
             if (DATE_COLUMNS.contains(column)) {
                 createTableSQL.append(column).append(" DATETIME, ");
-            } else if (column.equals("source_file_size") || column.equals("target_file_size")) {
+            } else if (column.equals("source_file_size") || column.equals("target_file_size") || column.equals("target_file_id")) {
                 createTableSQL.append(column).append(" BIGINT, ");
             } else {
                 createTableSQL.append(column).append(" TEXT, ");
@@ -291,26 +297,15 @@ public class SQLiteDirectImporter {
         createTableSQL.append("job_name TEXT, ");
         createTableSQL.append("import_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, ");
         
-        // Add unique constraint for UPSERT operations
+        // Add unique constraint for UPSERT operations  
         createTableSQL.append("UNIQUE(file_name, target_file_id)");
         createTableSQL.append(")");
         
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(createTableSQL.toString());
-            
-            // Create indexes for performance
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_file_name ON " + TABLE_NAME + " (file_name)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_target_file_id ON " + TABLE_NAME + " (target_file_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_file_status ON " + TABLE_NAME + " (file_status)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_status ON " + TABLE_NAME + " (status)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_parent_folder ON " + TABLE_NAME + " (parent_folder)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_parent_id ON " + TABLE_NAME + " (parent_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_level ON " + TABLE_NAME + " (level)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_source_file_size ON " + TABLE_NAME + " (source_file_size)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_job_name ON " + TABLE_NAME + " (job_name)");
         }
         
-        printProgress("Database table and indexes created/verified");
+        printProgress("Database table created/verified (indexes will be created after data import)");
     }
     
     /**
@@ -329,6 +324,8 @@ public class SQLiteDirectImporter {
      */
     private static int processXLSXStreaming(Connection conn, Path filePath) throws Exception {
         int totalRowsProcessed = 0;
+        int sheetCount = 0;
+        int transferReportSheets = 0;
         
         try (OPCPackage pkg = OPCPackage.open(filePath.toFile())) {
             XSSFReader reader = new XSSFReader(pkg);
@@ -339,15 +336,37 @@ public class SQLiteDirectImporter {
             while (sheets.hasNext()) {
                 try (InputStream sheet = sheets.next()) {
                     String sheetName = sheets.getSheetName();
+                    sheetCount++;
+                    
+                    System.out.println("    " + (SUPPORTS_EMOJI ? "📄 " : "[SHEET] ") + 
+                                     "Sheet " + sheetCount + ": " + sheetName);
                     
                     if (sheetName.startsWith("Transfer Report")) {
+                        transferReportSheets++;
+                        System.out.println("      " + (SUPPORTS_EMOJI ? "🔄 " : "[PROCESSING] ") + 
+                                         "Processing Transfer Report data...");
+                        
+                        long sheetStartTime = System.currentTimeMillis();
                         StreamingHandler handler = new StreamingHandler(conn, filePath.getFileName().toString());
                         processSheet(sheet, sst, handler);
-                        totalRowsProcessed += handler.getRowsProcessed();
+                        int rowsProcessed = handler.getRowsProcessed();
+                        totalRowsProcessed += rowsProcessed;
+                        
+                        long sheetDuration = System.currentTimeMillis() - sheetStartTime;
+                        System.out.println("      " + (SUPPORTS_EMOJI ? "✅ " : "[COMPLETED] ") + 
+                                         String.format("%,d", rowsProcessed) + " rows processed in " + 
+                                         formatTime(sheetDuration));
+                    } else {
+                        System.out.println("      " + (SUPPORTS_EMOJI ? "⏭️  " : "[SKIPPED] ") + 
+                                         "Not a Transfer Report sheet - skipping");
                     }
                 }
             }
         }
+        
+        System.out.println("    " + (SUPPORTS_EMOJI ? "📊 " : "[SUMMARY] ") + 
+                          "File summary: " + transferReportSheets + " Transfer Report sheets processed out of " + 
+                          sheetCount + " total sheets");
         
         return totalRowsProcessed;
     }
@@ -357,19 +376,44 @@ public class SQLiteDirectImporter {
      */
     private static int processXLSTraditional(Connection conn, Path filePath) throws Exception {
         int totalRowsProcessed = 0;
+        int transferReportSheets = 0;
+        int totalSheets = 0;
         
         try (FileInputStream fis = new FileInputStream(filePath.toFile());
              Workbook workbook = new HSSFWorkbook(fis)) {
             
-            for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+            totalSheets = workbook.getNumberOfSheets();
+            
+            for (int i = 0; i < totalSheets; i++) {
                 Sheet sheet = workbook.getSheetAt(i);
                 String sheetName = sheet.getSheetName();
                 
+                System.out.println("    " + (SUPPORTS_EMOJI ? "📄 " : "[SHEET] ") + 
+                                 "Sheet " + (i + 1) + ": " + sheetName);
+                
                 if (sheetName.startsWith("Transfer Report")) {
-                    totalRowsProcessed += processSheetTraditional(conn, sheet, filePath.getFileName().toString());
+                    transferReportSheets++;
+                    System.out.println("      " + (SUPPORTS_EMOJI ? "🔄 " : "[PROCESSING] ") + 
+                                     "Processing Transfer Report data...");
+                    
+                    long sheetStartTime = System.currentTimeMillis();
+                    int rowsProcessed = processSheetTraditional(conn, sheet, filePath.getFileName().toString());
+                    totalRowsProcessed += rowsProcessed;
+                    
+                    long sheetDuration = System.currentTimeMillis() - sheetStartTime;
+                    System.out.println("      " + (SUPPORTS_EMOJI ? "✅ " : "[COMPLETED] ") + 
+                                     String.format("%,d", rowsProcessed) + " rows processed in " + 
+                                     formatTime(sheetDuration));
+                } else {
+                    System.out.println("      " + (SUPPORTS_EMOJI ? "⏭️  " : "[SKIPPED] ") + 
+                                     "Not a Transfer Report sheet - skipping");
                 }
             }
         }
+        
+        System.out.println("    " + (SUPPORTS_EMOJI ? "📊 " : "[SUMMARY] ") + 
+                          "File summary: " + transferReportSheets + " Transfer Report sheets processed out of " + 
+                          totalSheets + " total sheets");
         
         return totalRowsProcessed;
     }
@@ -450,7 +494,7 @@ public class SQLiteDirectImporter {
                     } else {
                         upsertStmt.setNull(i + 1, Types.VARCHAR);
                     }
-                } else if (dbColumn.equals("source_file_size") || dbColumn.equals("target_file_size")) {
+                } else if (dbColumn.equals("source_file_size") || dbColumn.equals("target_file_size") || dbColumn.equals("target_file_id")) {
                     try {
                         if (value != null && !value.trim().isEmpty()) {
                             long fileSize = Long.parseLong(value.trim());
@@ -486,7 +530,9 @@ public class SQLiteDirectImporter {
             }
             upsertStmt.close();
             conn.setAutoCommit(true);
-            System.out.println(); // New line after progress dots
+            if (rowsProcessed > 0) {
+                System.out.println(); // New line after progress dots
+            }
         }
         
         public int getRowsProcessed() {
@@ -542,7 +588,9 @@ public class SQLiteDirectImporter {
                 conn.commit();
             }
             
-            System.out.println(); // New line after progress dots
+            if (rowsProcessed > 0) {
+                System.out.println(); // New line after progress dots
+            }
             
         } finally {
             upsertStmt.close();
@@ -567,7 +615,7 @@ public class SQLiteDirectImporter {
                 } else {
                     upsertStmt.setNull(i + 1, Types.VARCHAR);
                 }
-            } else if (dbColumn.equals("source_file_size") || dbColumn.equals("target_file_size")) {
+            } else if (dbColumn.equals("source_file_size") || dbColumn.equals("target_file_size") || dbColumn.equals("target_file_id")) {
                 try {
                     if (value != null && !value.trim().isEmpty()) {
                         long fileSize = Long.parseLong(value.trim());
@@ -629,6 +677,57 @@ public class SQLiteDirectImporter {
         parser.setContentHandler(contentHandler);
         parser.parse(new org.xml.sax.InputSource(sheetInputStream));
         handler.finish();
+    }
+    
+    /**
+     * Drop indexes before bulk import for optimal performance
+     */
+    private static void dropIndexes(Connection conn) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            long startTime = System.currentTimeMillis();
+            
+            // Drop indexes (ignore errors if they don't exist)
+            String[] indexes = {
+                "idx_file_name", "idx_target_file_id", "idx_file_status", "idx_status",
+                "idx_parent_folder", "idx_parent_id", "idx_level", "idx_source_file_size", "idx_job_name"
+            };
+            
+            int droppedCount = 0;
+            for (String index : indexes) {
+                try {
+                    stmt.execute("DROP INDEX IF EXISTS " + index);
+                    droppedCount++;
+                } catch (SQLException e) {
+                    // Ignore errors - index might not exist
+                }
+            }
+            
+            long duration = System.currentTimeMillis() - startTime;
+            printSuccess("Dropped " + droppedCount + " indexes in " + duration + "ms");
+        }
+    }
+    
+    /**
+     * Create indexes for optimal query performance (called after data import)
+     */
+    private static void createIndexes(Connection conn) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            long startTime = System.currentTimeMillis();
+            
+            // Create indexes for performance
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_file_name ON " + TABLE_NAME + " (file_name)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_target_file_id ON " + TABLE_NAME + " (target_file_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_file_status ON " + TABLE_NAME + " (file_status)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_status ON " + TABLE_NAME + " (status)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_parent_folder ON " + TABLE_NAME + " (parent_folder)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_parent_id ON " + TABLE_NAME + " (parent_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_level ON " + TABLE_NAME + " (level)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_source_file_size ON " + TABLE_NAME + " (source_file_size)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_job_name ON " + TABLE_NAME + " (job_name)");
+            
+            long duration = System.currentTimeMillis() - startTime;
+            printSuccess("Created 9 database indexes in " + duration + "ms");
+        }
     }
     
     /**

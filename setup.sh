@@ -167,19 +167,19 @@ test_jbang_scripts() {
     
     local failed_scripts=()
     
-    if jbang --dry-run SQLiteDirectImporter.java &> /dev/null; then
+    if timeout 10 jbang SQLiteDirectImporter.java --help &> /dev/null; then
         print_status "SQLiteDirectImporter.java validation successful"
     else
         failed_scripts+=("SQLiteDirectImporter.java")
     fi
     
-    if jbang --dry-run TransferOverviewExtractor.java &> /dev/null; then
+    if timeout 10 jbang TransferOverviewExtractor.java --help &> /dev/null; then
         print_status "TransferOverviewExtractor.java validation successful"
     else
         failed_scripts+=("TransferOverviewExtractor.java")
     fi
     
-    if jbang --dry-run InspectColumnsStreaming.java &> /dev/null; then
+    if timeout 10 jbang InspectColumnsStreaming.java --help &> /dev/null; then
         print_status "InspectColumnsStreaming.java validation successful"
     else
         failed_scripts+=("InspectColumnsStreaming.java")
