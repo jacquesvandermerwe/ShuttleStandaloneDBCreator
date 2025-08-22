@@ -200,17 +200,6 @@ check_runner_scripts() {
     
     local script_count=0
     
-    if [ -f "run.sh" ]; then
-        print_status "run.sh found"
-        if [ ! -x "run.sh" ]; then
-            chmod +x run.sh
-            print_status "Made run.sh executable"
-        fi
-        script_count=$((script_count + 1))
-    else
-        print_warning "run.sh not found"
-    fi
-    
     if [ -f "run-extractor.sh" ]; then
         print_status "run-extractor.sh found"
         if [ ! -x "run-extractor.sh" ]; then
@@ -220,6 +209,28 @@ check_runner_scripts() {
         script_count=$((script_count + 1))
     else
         print_warning "run-extractor.sh not found"
+    fi
+    
+    if [ -f "run-sqlite-importer.sh" ]; then
+        print_status "run-sqlite-importer.sh found"
+        if [ ! -x "run-sqlite-importer.sh" ]; then
+            chmod +x run-sqlite-importer.sh
+            print_status "Made run-sqlite-importer.sh executable"
+        fi
+        script_count=$((script_count + 1))
+    else
+        print_warning "run-sqlite-importer.sh not found"
+    fi
+    
+    if [ -f "run-overview.sh" ]; then
+        print_status "run-overview.sh found"
+        if [ ! -x "run-overview.sh" ]; then
+            chmod +x run-overview.sh
+            print_status "Made run-overview.sh executable"
+        fi
+        script_count=$((script_count + 1))
+    else
+        print_warning "run-overview.sh not found"
     fi
     
     if [ $script_count -eq 0 ]; then
@@ -289,8 +300,9 @@ main() {
     print_status "Environment setup complete!"
     echo
     print_info "Usage examples:"
-    print_info "  • Pattern extraction: ./run.sh [directory]"
     print_info "  • Comprehensive extraction: ./run-extractor.sh [directory]"
+    print_info "  • SQLite direct import: ./run-sqlite-importer.sh"
+    print_info "  • Overview extraction: ./run-overview.sh [directory]"
     print_info "  • File inspection: jbang InspectColumnsStreaming.java [excel_file]"
     print_info "  • Direct JBang usage: jbang ExcelProcessor.java [directory]"
     echo
