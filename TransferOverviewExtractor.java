@@ -486,65 +486,43 @@ public class TransferOverviewExtractor {
      * @return true if Overview sheet was found and extracted
      */
     private static boolean extractFromXLS(Path filePath) throws Exception {
-        boolean overviewFound = false;
-        int overviewSheetIndex = -1;
-        
-        // First pass: Find Overview sheet index without keeping workbook in memory
         try (FileInputStream fis = new FileInputStream(filePath.toFile());
-             HSSFWorkbook sourceWorkbook = new HSSFWorkbook(fis)) {
-            
-            System.out.println("📖 XLS Workbook loaded successfully. Found " + sourceWorkbook.getNumberOfSheets() + " sheets");
-            
-            // Find Overview sheet
-            for (int i = 0; i < sourceWorkbook.getNumberOfSheets(); i++) {
-                String sheetName = sourceWorkbook.getSheetName(i);
+             HSSFWorkbook workbook = new HSSFWorkbook(fis)) {
+
+            System.out.println("📖 XLS Workbook loaded successfully. Found " + workbook.getNumberOfSheets() + " sheets");
+
+            int overviewSheetIndex = -1;
+            for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+                String sheetName = workbook.getSheetName(i);
                 System.out.println("📋 Found sheet: '" + sheetName + "'");
                 
-                if (sheetName.equals("Overview")) {
+                if ("Overview".equals(sheetName)) {
                     System.out.println("⚡ Found Overview sheet: " + sheetName);
                     overviewSheetIndex = i;
-                    overviewFound = true;
                     break;
                 }
             }
-        } // Close first workbook to free memory
-        
-        if (overviewSheetIndex >= 0) {
-            // Second pass: Load workbook again and remove unwanted sheets
-            try (FileInputStream fis = new FileInputStream(filePath.toFile());
-                 HSSFWorkbook targetWorkbook = new HSSFWorkbook(fis)) {
-                
-                System.out.println("🔄 Reloading workbook for sheet extraction...");
-                
-                // Remove all sheets except the Overview sheet
-                // Start from the end to avoid index shifting issues
-                for (int i = targetWorkbook.getNumberOfSheets() - 1; i >= 0; i--) {
-                    if (i != overviewSheetIndex) {
-                        System.out.println("🗑️  Removing sheet: " + targetWorkbook.getSheetName(i));
-                        targetWorkbook.removeSheetAt(i);
-                        // Adjust overview sheet index if sheets before it were removed
-                        if (i < overviewSheetIndex) {
-                            overviewSheetIndex--;
-                        }
-                    }
-                }
-                
-                // Force garbage collection to free memory from removed sheets
-                System.gc();
-                
-                // Create output file path using organized structure
-                Path outputPath = getOverviewOutputPath(filePath);
-                
-                // Write the new workbook to file
-                try (FileOutputStream fos = new FileOutputStream(outputPath.toFile())) {
-                    targetWorkbook.write(fos);
-                }
-                
-                System.out.println("💾 Created Overview file: " + outputPath.getFileName());
-                System.out.println("📊 Preserved complete Overview sheet with all formatting, charts, and images");
+
+            if (overviewSheetIndex == -1) {
+                return false;
             }
+
+            // Remove all sheets except the Overview sheet
+            for (int i = workbook.getNumberOfSheets() - 1; i >= 0; i--) {
+                if (i != overviewSheetIndex) {
+                    System.out.println("🗑️  Removing sheet: " + workbook.getSheetName(i));
+                    workbook.removeSheetAt(i);
+                }
+            }
+
+            Path outputPath = getOverviewOutputPath(filePath);
+            try (FileOutputStream fos = new FileOutputStream(outputPath.toFile())) {
+                workbook.write(fos);
+            }
+
+            System.out.println("💾 Created Overview file: " + outputPath.getFileName());
+            System.out.println("📊 Preserved complete Overview sheet with all formatting, charts, and images");
+            return true;
         }
-        
-        return overviewFound;
     }
 }
