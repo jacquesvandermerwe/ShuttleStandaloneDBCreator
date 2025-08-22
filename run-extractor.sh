@@ -118,7 +118,7 @@ main() {
     echo
     
     # Count Excel files in directory only (not subdirectories, excluding temporary files starting with ~)
-    EXCEL_COUNT=$(find "$DIRECTORY" -maxdepth 1 -name "*.xlsx" -o -name "*.xls" 2>/dev/null | grep -v '/~' | wc -l | tr -d ' ')
+    EXCEL_COUNT=$(find "$DIRECTORY" -maxdepth 1 \( -name "*.xlsx" -o -name "*.xls" \) ! -name "~*" 2>/dev/null | wc -l | tr -d ' ')
     
     if [ "$EXCEL_COUNT" -eq 0 ]; then
         print_warning "No Excel files found in: $DIRECTORY"
