@@ -892,23 +892,8 @@ public class SQLiteDirectImporter {
      */
     private static String getCellValueAsString(Cell cell) {
         if (cell == null) return "";
-        
-        switch (cell.getCellType()) {
-            case STRING:
-                return cell.getStringCellValue();
-            case NUMERIC:
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    return cell.getDateCellValue().toString();
-                } else {
-                    return String.valueOf(cell.getNumericCellValue());
-                }
-            case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
-            case FORMULA:
-                return cell.getCellFormula();
-            default:
-                return "";
-        }
+        DataFormatter formatter = new DataFormatter();
+        return formatter.formatCellValue(cell);
     }
     
     private static int calculateLevel(String filePath) {
