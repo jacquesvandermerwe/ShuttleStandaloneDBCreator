@@ -24,8 +24,6 @@ This project uses JBang for simplified Java execution without traditional build 
 - `jbang TransferOverviewExtractor.java [directory]` - Extract Overview sheets
 - `jbang InspectColumnsStreaming.java [file]` - Examine file structure
 
-## Architecture
-
 ## Folder Structure
 
 The application uses an organized folder structure:
